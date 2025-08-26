@@ -2,51 +2,48 @@ pipeline {
     agent any
 
     environment {
-        DOCKERHUB_USER = "your-dockerhub-username"
-        IMAGE_NAME = "devops-demo"
+        DOCKERHUB_CREDENTIALS = credentials('dockerhub-creds') 
+        DOCKER_IMAGE = "usway/pipeline-for-webapp:latest"
     }
 
     stages {
-        stage('Clone Code') {
+        stage('Checkout Code') {
             steps {
-                bat 'git --version'  // sanity check
-                checkout scm
+                git branch: 'main', url: 'https://github.com/Uswahy/Pipeline-For-WebApp.git'
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                bat "docker build -t %DOCKERHUB_USER%/%IMAGE_NAME% ."
-            }
-        }
-
-        stage('Login to DockerHub') {
-            steps {
-                withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-                    bat "docker login -u %DOCKER_USER% -p %DOCKER_PASS%"
+                script {
+                    sh "docker build -t ${DOCKER_IMAGE} ."
                 }
             }
         }
 
-        stage('Push Image to DockerHub') {
+        stage('Login to Docker Hub') {
             steps {
-                bat "docker push %DOCKERHUB_USER%/%IMAGE_NAME%"
+                script {
+                    sh "echo ${DOCKERHUB_CREDENTIALS_PSW} | docker login -u ${DOCKERHUB_CREDENTIALS_USR} --password-stdin"
+                }
             }
         }
 
-        stage('Deploy to EC2') {
+        stage('Push Docker Image') {
             steps {
-                // For Windows Jenkins, we use pscp + plink or AWS CLI.
-                // Example below assumes AWS CLI is configured:
-                bat 'aws ec2 describe-instances'  // sanity check
-                // Normally you'd ssh into EC2 and run docker commands.
+                script {
+                    sh "docker push ${DOCKER_IMAGE}"
+                }
             }
         }
+    }
 
-        stage('Backup Logs to S3') {
-            steps {
-                bat 'aws s3 cp C:\\ProgramData\\Jenkins\\.jenkins\\logs s3://your-s3-bucket-name/ --recursive'
-            }
+    post {
+        success {
+            echo '✅ Pipeline completed successfully!'
+        }
+        failure {
+            echo '❌ Pipeline failed.'
         }
     }
 }
