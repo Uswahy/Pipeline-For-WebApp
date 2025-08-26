@@ -1,78 +1,52 @@
 pipeline {
-  agent any
+    agent any
 
-  environment {
-    DOCKERHUB_REPO = "your-dockerhub-username/devops-demo"
-    EC2_HOST = "your-ec2-public-ip"
-    EC2_USER = "ubuntu"
-    S3_BUCKET = "your-s3-bucket-name"
-    CONTAINER_NAME = "devops-demo"
-    APP_PORT = "3000"
-    IMAGE_TAG = "${DOCKERHUB_REPO}:${env.BUILD_NUMBER}"
-  }
-
-  stages {
-    stage('Checkout') {
-      steps {
-        checkout scm
-      }
+    environment {
+        DOCKERHUB_USER = "your-dockerhub-username"
+        IMAGE_NAME = "devops-demo"
     }
 
-    stage('Build Docker image') {
-      steps {
-        sh '''
-          docker build -t ${DOCKERHUB_REPO}:latest -t ${IMAGE_TAG} .
-        '''
-      }
-    }
-
-    stage('Push Docker image') {
-      steps {
-        withCredentials([usernamePassword(credentialsId: 'dockerhub_credentials', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-          sh '''
-            echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-            docker push ${DOCKERHUB_REPO}:latest
-            docker push ${IMAGE_TAG}
-          '''
+    stages {
+        stage('Clone Code') {
+            steps {
+                bat 'git --version'  // sanity check
+                checkout scm
+            }
         }
-      }
-    }
 
-    stage('Deploy to EC2') {
-      steps {
-        sshagent(['ec2_ssh']) {
-          sh '''
-            ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOST} "
-              docker pull ${IMAGE_TAG} &&
-              docker rm -f ${CONTAINER_NAME} || true &&
-              sudo mkdir -p /var/log/myapp &&
-              docker run -d --name ${CONTAINER_NAME} \\
-                -p 80:${APP_PORT} \\
-                -v /var/log/myapp:/usr/src/app/logs \\
-                --restart unless-stopped \\
-                ${IMAGE_TAG}
-            "
-          '''
+        stage('Build Docker Image') {
+            steps {
+                bat "docker build -t %DOCKERHUB_USER%/%IMAGE_NAME% ."
+            }
         }
-      }
-    }
 
-    stage('Backup logs to S3') {
-      steps {
-        sshagent(['ec2_ssh']) {
-          sh '''
-            ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOST} "
-              aws s3 sync /var/log/myapp s3://${S3_BUCKET}/logs/$(date +%F)/ --only-show-errors
-            "
-          '''
+        stage('Login to DockerHub') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                    bat "docker login -u %DOCKER_USER% -p %DOCKER_PASS%"
+                }
+            }
         }
-      }
-    }
-  }
 
-  post {
-    always {
-      cleanWs()
+        stage('Push Image to DockerHub') {
+            steps {
+                bat "docker push %DOCKERHUB_USER%/%IMAGE_NAME%"
+            }
+        }
+
+        stage('Deploy to EC2') {
+            steps {
+                // For Windows Jenkins, we use pscp + plink or AWS CLI.
+                // Example below assumes AWS CLI is configured:
+                bat 'aws ec2 describe-instances'  // sanity check
+                // Normally you'd ssh into EC2 and run docker commands.
+            }
+        }
+
+        stage('Backup Logs to S3') {
+            steps {
+                bat 'aws s3 cp C:\\ProgramData\\Jenkins\\.jenkins\\logs s3://your-s3-bucket-name/ --recursive'
+            }
+        }
     }
-  }
 }
