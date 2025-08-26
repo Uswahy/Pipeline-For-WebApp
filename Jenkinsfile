@@ -3,18 +3,14 @@ def app
 pipeline {
     agent any
     environment {
-        DOCKERHUB_CREDENTIALS = credentials('dockerhub-credentials') // 👈 use the ID you created
-        IMAGE_NAME = "usway/pipeline-for-webapp" // 👈 your Docker Hub repo name
+        DOCKERHUB_CREDENTIALS = credentials('dockerhub-credentials') // your Jenkins credential ID
+        IMAGE_NAME = "usway/pipeline-for-webapp" // Docker Hub repo
     }
     stages {
-        stage('Clone repo') {
-            steps {
-                git 'https://github.com/Uswahy/Pipeline-For-WebApp.git'
-            }
-        }
         stage('Build Docker Image') {
             steps {
                 script {
+                    // Build Docker image using the already checked out repo
                     app = docker.build("${IMAGE_NAME}")
                 }
             }
