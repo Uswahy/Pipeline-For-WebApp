@@ -73,12 +73,13 @@ pipeline {
                 sshagent(['ec2-ssh-key']) {
                     bat """
                         ssh -o StrictHostKeyChecking=no ${EC2_HOST} ^
-                        "aws s3 sync /var/log/webapp s3://${S3_BUCKET}/$(date +%Y-%m-%d_%H-%M-%S)"
+                        "aws s3 sync /var/log/webapp s3://${S3_BUCKET}/%DATE:~10,4%-%DATE:~4,2%-%DATE:~7,2%_%TIME:~0,2%-%TIME:~3,2%-%TIME:~6,2%"
                     """
                 }
             }
         }
     }
 }
+
 
 
