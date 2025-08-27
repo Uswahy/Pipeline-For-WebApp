@@ -1,14 +1,14 @@
 pipeline {
     agent any
     environment {
-        DOCKER_IMAGE = "usway/pipeline-for-webapp"
-        EC2_HOST = "ubuntu@54.196.86.213"
-        S3_BUCKET = "final-devops-logs-usway"
+        DOCKER_IMAGE = "pipeline-for-webapp"        // Your Docker Hub repo
+        EC2_HOST = "ubuntu@54.196.86.213"          // Your EC2 public IP
+        S3_BUCKET = "final-devops-logs-usway"      // Your S3 bucket name
     }
     stages {
         stage('Checkout') {
             steps {
-                git 'https://github.com/usway/pipeline-for-webapp.git'
+                git 'https://github.com/Uswahy/Pipeline-For-WebApp.git'
             }
         }
         stage('Build Docker Image') {
@@ -53,4 +53,5 @@ pipeline {
         }
     }
 }
+
 
