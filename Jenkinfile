@@ -1,18 +1,22 @@
 pipeline {
     agent any
+
     environment {
         DOCKER_IMAGE = "pipeline-for-webapp"       // Docker Hub repo
         EC2_HOST = "ubuntu@54.196.86.213"         // EC2 user@IP
         S3_BUCKET = "final-webapp-logs"           // S3 bucket name
     }
+
     stages {
         stage('Pre-Flight Checks') {
             steps {
                 echo "✅ Checking Git..."
                 bat 'git --version'
+
                 echo "✅ Checking Docker..."
                 bat 'docker --version'
                 bat 'docker info || echo Docker info warning'
+
                 echo "✅ SSH ready to EC2..."
             }
         }
@@ -69,7 +73,7 @@ pipeline {
                     script {
                         bat """
                             ssh -i %EC2_KEY% -o StrictHostKeyChecking=no ${EC2_HOST} ^
-                            "for /f \\"tokens=1-4 delims=/ \\" %a in ('date /t') do set dt=%d-%b-%c_%time:~0,2%-%time:~3,2%-%time:~6,2% && ^
+                            "set dt=%date:~10,4%-%date:~4,2%-%date:~7,2%_%time:~0,2%-%time:~3,2%-%time:~6,2% && ^
                             set dt=!dt: =0! && ^
                             aws s3 sync /var/log/webapp s3://${S3_BUCKET}/!dt!"
                         """
@@ -91,8 +95,5 @@ pipeline {
         }
     }
 }
-
-}
-
 
 
