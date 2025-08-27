@@ -1,19 +1,18 @@
-const fs = require('fs');
-const path = require('path');
 const express = require('express');
-const morgan = require('morgan');
-
+const fs = require('fs');
 const app = express();
-const PORT = process.env.PORT || 3000;
+const port = 80;
 
-const logsDir = path.join(__dirname, 'logs');
-if (!fs.existsSync(logsDir)) fs.mkdirSync(logsDir, { recursive: true });
-
-const accessLogStream = fs.createWriteStream(path.join(logsDir, 'access.log'), { flags: 'a' });
-app.use(morgan('combined', { stream: accessLogStream }));
-
+// Log each visit
 app.get('/', (req, res) => {
-  res.send(`✅ DevOps Demo App is running! Time: ${new Date().toISOString()}`);
+    const log = `${new Date().toISOString()} - ${req.ip} visited\n`;
+    fs.appendFile('/var/log/webapp/access.log', log, (err) => {
+        if (err) console.error(err);
+    });
+    res.send('✅ App deployed successfully via DevOps pipeline!');
 });
 
-app.listen(PORT, () => console.log(`Server running on http://0.0.0.0:${PORT}`));
+app.listen(port, () => {
+    console.log(`App running on port ${port}`);
+});
+
