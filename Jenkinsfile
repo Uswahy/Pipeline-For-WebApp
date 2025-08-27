@@ -6,6 +6,25 @@ pipeline {
         S3_BUCKET = "final-webapp-logs"            // Your S3 bucket name
     }
     stages {
+
+        stage('Pre-Flight Checks') {
+            steps {
+                script {
+                    echo "✅ Checking Git..."
+                    sh "git --version"
+
+                    echo "✅ Checking Docker..."
+                    sh "docker --version"
+                    sh "docker info || true"  // won't fail pipeline if Docker info has warnings
+
+                    echo "✅ Checking SSH to EC2..."
+                    sshagent(['ec2-ssh-key']) {
+                        sh "ssh -o StrictHostKeyChecking=no ${EC2_HOST} 'echo SSH connection OK'"
+                    }
+                }
+            }
+        }
+
         stage('Checkout') {
             steps {
                 git branch: 'main', url: 'https://github.com/Uswahy/Pipeline-For-WebApp.git'
@@ -23,7 +42,6 @@ pipeline {
         stage('Push Docker Image') {
             steps {
                 script {
-                    // Use your Jenkins Docker Hub credentials
                     docker.withRegistry('https://index.docker.io/v1/', 'dockerhub-credentials') {
                         def img = docker.image("${DOCKER_IMAGE}:${env.BUILD_NUMBER}")
                         img.push()
@@ -35,7 +53,6 @@ pipeline {
 
         stage('Deploy to EC2') {
             steps {
-                // Use your Jenkins EC2 SSH key
                 sshagent(['ec2-ssh-key']) {
                     sh """
                         ssh -o StrictHostKeyChecking=no ${EC2_HOST} \\
@@ -60,6 +77,5 @@ pipeline {
         }
     }
 }
-
 
 
