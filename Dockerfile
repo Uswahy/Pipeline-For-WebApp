@@ -1,15 +1,18 @@
-FROM node:18-alpine
+# Use official Node.js image
+FROM node:18
 
+# Set working directory
 WORKDIR /usr/src/app
 
-COPY package*.json ./
-RUN npm ci --only=production
+# Copy package.json and install dependencies
+COPY app/package*.json ./
+RUN npm install
 
-COPY . .
+# Copy app code
+COPY app/ ./
 
-ENV NODE_ENV=production
-EXPOSE 3000
+# Expose port 80
+EXPOSE 80
 
-RUN mkdir -p /usr/src/app/logs
-
+# Start app
 CMD ["npm", "start"]
